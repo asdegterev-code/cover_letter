@@ -1,0 +1,15 @@
+    Abgeschlossenes Studium der Informatik, Data Science, Mathematik, Wirtschaftsinformatik oder eines vergleichbaren Fachgebiets
+
+    Mehrjährige praktische Erfahrung im Bereich Künstliche Intelligenz und Machine Learning, einschließlich Automatisierungs- und Generative-AI-Tools
+
+    Fundierte Kenntnisse im Umgang mit Large Language Models (LLMs), Embeddings sowie Vektorsuche und Retrieval-Augmented Generation (RAG)
+
+    Sehr gute Kenntnisse gängiger ML- und NLP-Frameworks (z. B. scikit-learn, PyTorch, TensorFlow, Hugging Face)
+
+    Sehr gute Programmierkenntnisse in Python sowie sicherer Umgang mit SQL und Git
+
+    Erfahrung mit MLOps- und LLMOps-Methoden und -Tools (z. B. Docker, Kubernetes, CI/CD, MLflow) inklusive Deployment, Evaluation und Monitoring von KI-Systemen in Cloud- und On-Premises-Umgebungen
+
+    Praxis in der Verarbeitung strukturierter und unstrukturierter Daten (Text, Sprache, Bild) sowie gutes Verständnis für Datenschutz, IT-Sicherheit und ethische Anforderungen an KI-Systeme
+
+    Verhandlungssichere Deutsch- und Englischkenntnisse in Wort und Schrift

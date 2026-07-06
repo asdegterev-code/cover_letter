@@ -1,0 +1,14 @@
+In dieser Rolle arbeitest du an vielseitigen Projekten, die das Fundament einer modernen digitalen Teilhabe bilden. Zu deinen Aufgaben gehören:
+
+    Beratung und strategische Begleitung bei der Einführung von KI-, Generative-AI- und Automatisierungslösungen in der Produktion – von der Use-Case-Identifikation bis zur Roadmap-Entwicklung
+
+    Analyse und Optimierung von Fach- und IT-Prozessen sowie Entwicklung nachhaltiger Datenstrategien (Data Governance, Datenqualität) zur Steigerung von Effizienz und Wirkung
+
+    Konzeption, Entwicklung und Implementierung von Machine-Learning-, NLP- und LLM-basierten Lösungen, z. B. für Chatbots, Entscheidungsunterstützung und RAG-Systeme
+
+    Umsetzung von Generative-AI-Use-Cases inkl. Prompt Engineering, agentenbasierten Architekturen und Integration moderner LLM-Technologien
+
+    Integration von KI-Komponenten in bestehende IT-Architekturen (Cloud) unter Berücksichtigung von Skalierbarkeit, Sicherheit und Interoperabilität
+
+    Aufbau und Etablierung von MLOps- und LLMOps-Prozessen für Deployment, Monitoring, Evaluation und kontinuierliche Verbesserung von KI-Systemen (inkl. CI/CD)
+

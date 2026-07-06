@@ -1,0 +1,41 @@
+services:
+  ollama:
+    # Offizielles Ollama-Image
+    #image: ollama/ollama
+    image: ollama/ollama:latest
+    # Optional: GPU Support aktivieren
+    # command: serve
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+    volumes:
+      # Persistente Speicherung der Modelle
+      - ollama_data:/root/.ollama
+    networks:
+      - app-network
+
+  app:
+    # Wir erstellen dieses Image gleich
+    build: .
+    env_file:
+      - .env
+    # Befehl zum Starten Ihrer Python-App
+    command: python generate_resume.py
+    # Stellt sicher, dass Ollama zuerst läuft
+    depends_on:
+      - ollama
+    networks:
+      - app-network
+    volumes:
+      - ./app_output:/app/output
+
+volumes:
+  ollama_data:
+
+networks:
+  app-network:
+    driver: bridge
