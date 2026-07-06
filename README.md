@@ -22,6 +22,8 @@ GROQ_API_KEY=GHC...
 ```
 hat, wo ABC..., DEF..., GHC... - ihre individuellen freien API-Keys sein müssen, die Sie nach der Anmeldung bei GOOGLE, MISTRAL und GROQ CLOUD CONSOLE erhalten.
 
+In der Datei docker-compose.yml unter `# Optional: GPU Support aktivieren` sind darauffolgende Zeilen auskommentiert (mit '# ' vorne versehen). Das wurde gemacht, damit das Programm auch auf Servers ohne Grafikkarten funktionieren könnte (was aber deutlich länger dauert). Wenn Sie eine Grafikkarte >=4Gb besitzen, entfernen Sie dort diese '# '-Zeichen.
+
 Starten Sie ihr Docker Desktop.
 Wenn Sie unter Windows sind, starten Sie ihr Ubuntu WSL Terminal und stellen Sie sicher, dass Sie im Verzeichnis sind, wo sich generate_resume.py und andere obengenannten Dateien befinden.
 Starten Sie die Dienste:
