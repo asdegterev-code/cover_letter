@@ -8,7 +8,7 @@ Das Programm erstellt ein Beispiel eines Initiativbriefes/Anschreibens auf Basis
 Alle Musterdateien mit oben angegebenen Namen müssen individuell angepasst bzw. durch eigene massgeschneiderte Varianten ersetzt werden (Regeln.md kann bleiben, wenn Sie diese Regeln nicht besser formulieren können).
 
 Datei Lebenslauf-etc.md enthält alle für den Arbeitgeber wichtigen Informationen über Sie.
-Sie besteht aus Kategorien ('# ' am Zeilenanfang), Unterkategorien ('## ' am Zeilenanfang, wird vom Programm als Titel für Hauptgedanken des Anschreibens verwendet) und Absätzen ('### ' am Zeilenanfang, wird vom Programm zum Erzeugen des Textes verwendet). Privatdate können Sie, damit sie den Cloud-Modellen nicht preisgegeben werden, durch fiktive ersetzen (Ernst Mustermann).
+Sie besteht aus Kategorien ('# ' am Zeilenanfang), Unterkategorien ('## ' am Zeilenanfang, wird vom Programm als Titel für Hauptgedanken des Anschreibens verwendet) und Absätzen ('### ' am Zeilenanfang, wird vom Programm zum Erzeugen des Textes verwendet). Privatdaten können Sie, damit sie den Cloud-Modellen nicht preisgegeben werden, durch fiktive ersetzen (Ernst Mustermann).
 
 Datei Stellenbeschreibung.txt enthält Angaben über die Firma und Stelle, aber ohne die Listen der künftigen Aufgaben, die man separat in die Datei Aufgaben.txt, und Anforderungen an Kandidaten, die man separat in die Datei Anforderungen.txt ablegt. Alle Zeilen in Aufgaben.txt und Anforderungen.txt sollen durch leere Zeilen getrennt werden. Zum Erstellen der Dateien kann man C&P aus der Stellenanzeige benutzen.
 
@@ -31,10 +31,10 @@ Starten Sie die Dienste:
 docker compose up --build
 ```
 Ollama lädt die lokalen Modelle beim ersten Aufruf herunter, was beim Start der App zu einem Timeout führen kann. Es ist besser, das Modell vorher zu "pre-pullen" (selbst wenn die App mit Fehlern abgestürzt ist).
-Öffnen Sie ein zweites Ubuntu WSL Terminal, während das erste `docker compose up` läuft, und führen Sie diesen Befehl aus, um die lokalem Modelle in das persistente Volume zu laden:
+Öffnen Sie ein zweites Ubuntu WSL Terminal, während das erste `docker compose up` läuft, und führen Sie diese Befehle aus, um die lokalen Modelle in das persistente Volume zu laden:
 ```
 docker exec cover_letter-ollama-1 ollama pull mxbai-embed-large
-docker exec cover_letter-ollama-1 ollama pull llama3.2
+docker exec cover_letter-ollama-1 ollama pull llama3.2:3b
 docker exec cover_letter-ollama-1 ollama pull gemma4:e4b
 docker exec cover_letter-ollama-1 ollama pull mistral
 ```
