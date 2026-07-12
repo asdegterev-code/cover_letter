@@ -1,7 +1,6 @@
 services:
   ollama:
     # Offizielles Ollama-Image
-    #image: ollama/ollama
     image: ollama/ollama:latest
     # Optional: GPU Support aktivieren
     # command: serve

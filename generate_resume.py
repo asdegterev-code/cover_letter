@@ -23,7 +23,7 @@ from langgraph.prebuilt.chat_agent_executor import AgentState
 from langchain_core.tools import convert_runnable_to_tool
 #from langchain_core.documents import Document
 #from langchain_community.tools import DuckDuckGoSearchRun
-import asyncio, json, os
+import asyncio, json, os, time
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_mistralai import ChatMistralAI
 from langchain_groq import ChatGroq
@@ -42,7 +42,8 @@ MODEL_LIGHT = "llama3.2:3b"
 MODEL_MIDDLE = "mistral"
 GOOGLE_MODEL = "gemini-2.5-flash"
 MISTRAL_MODEL = "mistral-large-latest"  # man kann auch andere Modelle wie "mistral-small-latest" wählen
-GROQ_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
+GROQ_MODEL = "groq/openai/gpt-oss-20b" #"meta-llama/llama-4-scout-17b-16e-instruct"
+TIMEOUT = 5
 
 #Eigene Unterlagen laden
 docs = TextLoader(CV).load()
@@ -148,6 +149,10 @@ llm_enorm = ChatGoogleGenerativeAI(model=GOOGLE_MODEL, temperature=0)
 llm_enorm_alt = ChatMistralAI(model=MISTRAL_MODEL, temperature=0)   
 llm_enorm_loc = ChatOllama(model=MODEL_HUGE, temperature=0, base_url=OLLAMA_URL)
 llm_middle = ChatOllama(model=MODEL_MIDDLE, temperature=0.1, base_url=OLLAMA_URL)
+llm = ChatGroq(model=GROQ_MODEL, temperature=0.2)
+llm_alt = ChatMistralAI(model=MISTRAL_MODEL, temperature=0.2)   
+llm_loc = ChatOllama(model=MODEL_LIGHT, temperature=0.2, base_url=OLLAMA_URL)
+llm_alt1 = ChatOllama(model=MODEL_MIDDLE, temperature=0.2, base_url=OLLAMA_URL)
 
 planner = planner_prompt | llm_huge | StrOutputParser()   
 planner_alt = planner_prompt | llm_huge_alt | StrOutputParser() 
@@ -263,7 +268,12 @@ class ReflectionAgentState(TypedDict):
     documents: str
     doc_set: set[str]
 
-def _hypo_doc_embedding(state):
+hypo_llm = ChatGroq(model=GROQ_MODEL, temperature=0.2)
+hypo_llm_alt = ChatMistralAI(model=MISTRAL_MODEL, temperature=0.2)   
+hypo_llm_alt1 = ChatOllama(model=MODEL_MIDDLE, temperature=0.2, base_url=OLLAMA_URL)
+hypo_llm_loc = ChatOllama(model=MODEL_LIGHT, temperature=0.2, base_url=OLLAMA_URL)
+
+def _hypo_doc_embedding(state: ReflectionAgentState):
     # ein Prompt zum Generieren eines hypothetischen Dokuments
     hyde_template = """Auf Basis der Frage: {question}
     zum Punkt: {item} 
@@ -278,15 +288,11 @@ def _hypo_doc_embedding(state):
         input_variables=["question", "item", "options"],
         template=hyde_template
     )
-
-    llm = ChatGroq(model=GROQ_MODEL, temperature=0.2)
-    llm_alt = ChatMistralAI(model=MISTRAL_MODEL, temperature=0.2)   
-    llm_loc = ChatOllama(model=MODEL_LIGHT, temperature=0.2, base_url=OLLAMA_URL)
-    llm_alt1 = ChatOllama(model=MODEL_MIDDLE, temperature=0.2, base_url=OLLAMA_URL)
-    hyde_chain = hyde_prompt | llm | StrOutputParser()
-    hyde_chain_alt = hyde_prompt | llm_alt | StrOutputParser()
-    hyde_chain_alt1 = hyde_prompt | llm_alt1 | StrOutputParser()    
-    hyde_chain_loc = hyde_prompt | llm_loc | StrOutputParser()
+   
+    hyde_chain = hyde_prompt | hypo_llm | StrOutputParser()
+    hyde_chain_alt = hyde_prompt | hypo_llm_alt | StrOutputParser()
+    hyde_chain_alt1 = hyde_prompt | hypo_llm_alt1 | StrOutputParser()    
+    hyde_chain_loc = hyde_prompt | hypo_llm_loc | StrOutputParser()
     print(state)
     # hypotheticsches Dokument generieren
     query = {"question": state["question"],
@@ -296,14 +302,17 @@ def _hypo_doc_embedding(state):
     try:
         hypothetical_doc = hyde_chain.invoke(query)
     except:
+        time.sleep(TIMEOUT)
         try:
             print("******* no cloud model, try a local one *******\n")
             hypothetical_doc = hyde_chain_loc.invoke(query)
         except:
+            time.sleep(TIMEOUT)
             try:
                 print("??????? no local model, try an alternative one ???????\n")
                 hypothetical_doc = hyde_chain_alt.invoke(query)
             except:
+                time.sleep(TIMEOUT)
                 print("!!!!!!! no other models, try the alternative two !!!!!!!\n")
                 hypothetical_doc = hyde_chain_alt1.invoke(query)               
        
@@ -327,7 +336,7 @@ def _hypo_doc_embedding(state):
         print ("\nooooooooooooooooooooooooooo\n")   
     return {"documents": "\n".join(doc_set), "doc_set": doc_set, "example": hypothetical_doc}  
 
-def _hypo_doc_embedding_ext(state):
+def _hypo_doc_embedding_ext(state: ReflectionAgentState):
     # ein Prompt zum Generieren eines hypothetischen Dokuments mit Kritik
     hyde_template = """Auf Basis der Frage: {question}
     zum Punkt: {item} 
@@ -344,14 +353,10 @@ def _hypo_doc_embedding_ext(state):
         template=hyde_template
     )
 
-    llm = ChatGroq(model=GROQ_MODEL, temperature=0.2)
-    llm_alt = ChatMistralAI(model=MISTRAL_MODEL, temperature=0.2)
-    llm_loc = ChatOllama(model=MODEL_LIGHT, temperature=0.2, base_url=OLLAMA_URL)
-    llm_alt1 = ChatOllama(model=MODEL_MIDDLE, temperature=0.2, base_url=OLLAMA_URL)
-    hyde_chain = hyde_prompt | llm | StrOutputParser()
-    hyde_chain_alt = hyde_prompt | llm_alt | StrOutputParser()
-    hyde_chain_alt1 = hyde_prompt | llm_alt1 | StrOutputParser()
-    hyde_chain_loc = hyde_prompt | llm_loc | StrOutputParser()
+    hyde_chain = hyde_prompt | hypo_llm | StrOutputParser()
+    hyde_chain_alt = hyde_prompt | hypo_llm_alt | StrOutputParser()
+    hyde_chain_alt1 = hyde_prompt | hypo_llm_alt1 | StrOutputParser()
+    hyde_chain_loc = hyde_prompt | hypo_llm_loc | StrOutputParser()
     print(state)
     # hypotheticsches Dokument generieren
     query = {"question": state["question"],
@@ -366,10 +371,12 @@ def _hypo_doc_embedding_ext(state):
             print("******* no cloud model, try a local one *******\n")
             hypothetical_doc = hyde_chain_loc.invoke(query)
         except:
+            time.sleep(TIMEOUT)
             try:
                 print("??????? no local model, try an alternative one ???????\n")
                 hypothetical_doc = hyde_chain_alt.invoke(query)
             except:
+                time.sleep(TIMEOUT)
                 print("!!!!!!! no other models, try the alternative two !!!!!!!\n")
                 hypothetical_doc = hyde_chain_alt1.invoke(query) 
     print("############### hypothetical doc extended ###############")
@@ -391,16 +398,7 @@ def _hypo_doc_embedding_ext(state):
     for dc in doc_set:
         print(dc)
         print ("\nooooooooooooooooooooooooooo\n")   
-    return {"documents": "\n".join(doc_set), "doc_set": doc_set}  
-
-def _direct_doc_search(state):
-    results = VECTOR_STORE.similarity_search(state.question) 
-    docs = [ doc.metadata.get('Unterkategorie', '-') + ": " + doc.page_content for doc in results ]
-    print("############### direct-docs ###############")    
-    for dc in docs:
-        print(dc)
-        print ("\nooooooooooooooooooooooooooo\n")     
-    return {"documents": "\n".join(docs)}   
+    return {"documents": "\n".join(doc_set), "doc_set": doc_set}    
 
 def _should_end(state: ReflectionAgentState, config: RunnableConfig) -> Literal["ext_fill_doc", END]:
     max_reasoning_steps = config["configurable"].get("max_reasoning_steps", 1)
@@ -426,29 +424,29 @@ def _should_end2(state: ReflectionAgentState, config: RunnableConfig) -> Literal
         return END
     return "reflect"
 
-llm = ChatGroq(model=GROQ_MODEL, temperature=0.2)
-llm_alt = ChatMistralAI(model=MISTRAL_MODEL, temperature=0.2)   
-llm_loc = ChatOllama(model=MODEL_LIGHT, temperature=0.2, base_url=OLLAMA_URL)
-llm_alt1 = ChatOllama(model=MODEL_MIDDLE, temperature=0.2, base_url=OLLAMA_URL)
+
 reflection_chain = PromptTemplate.from_template(reflection_prompt) | llm | StrOutputParser()  
 reflection_chain_alt = PromptTemplate.from_template(reflection_prompt) | llm_alt | StrOutputParser()
 reflection_chain_alt1 = PromptTemplate.from_template(reflection_prompt) | llm_alt1 | StrOutputParser()
 reflection_chain_loc = PromptTemplate.from_template(reflection_prompt) | llm_loc | StrOutputParser()
 
-def _reflection_step(state):
+def _reflection_step(state: ReflectionAgentState):
     print(f"\n==== Antwort: {state["answer"]} ====\n")
     result = []
     try:
         result = reflection_chain.invoke(state)
     except:
+        time.sleep(TIMEOUT)
         try:
             print("******* no cloud model, try a local one *******\n")
             result = reflection_chain_loc.invoke(state)
         except:
+            time.sleep(TIMEOUT)
             try:
                 print("??????? no local model, try an alternative one ???????\n")
                 result = reflection_chain_alt.invoke(state)
             except:
+                time.sleep(TIMEOUT)
                 print("!!!!!!! no other models, try the alternative two !!!!!!!\n")
                 result = reflection_chain_alt1.invoke(state)        
           
@@ -466,25 +464,28 @@ def _reflection_step(state):
     return {"response": res, "steps": 1}
 
 
-def _research_start(state):
+def _research_start(state: ReflectionAgentState):
     answer = []
     try:
         answer = research_agent.invoke(state)
     except:
+        time.sleep(TIMEOUT)
         try:
             print("******* no cloud model, try a local one *******\n")
             answer = research_agent_loc.invoke(state)
         except:
+            time.sleep(TIMEOUT)
             try:
                 print("??????? no local model, try an alternative one ???????\n")
                 answer = research_agent_alt.invoke(state)
             except:
+                time.sleep(TIMEOUT)
                 print("!!!!!!! no other models, try the alternative two !!!!!!!\n")
                 answer = research_agent_alt1.invoke(state)
     return {"answer": answer["messages"][-1].content}
 
 
-def _research(state):
+def _research(state: ReflectionAgentState):
     agent_state = {
       "item": state["item"],
       "answer": state["answer"],
@@ -498,14 +499,17 @@ def _research(state):
     try:
         answer = research_agent_with_critique.invoke(agent_state)
     except:
+        time.sleep(TIMEOUT)
         try:
             print("******* no cloud model, try a local one *******\n")
             answer = research_agent_with_critique_loc.invoke(agent_state)
         except:
+            time.sleep(TIMEOUT)
             try:
                 print("??????? no local model, try an alternative one ???????\n")
                 answer = research_agent_with_critique_alt.invoke(agent_state)
             except:
+                time.sleep(TIMEOUT)
                 print("!!!!!!! no other models, try the alternative two !!!!!!!\n")
                 answer = research_agent_with_critique_alt1.invoke(agent_state)
     print(f"\n#### revidierte Antwort: {answer["messages"][-1].content} ####\n")
@@ -637,7 +641,7 @@ prompt_voting = PromptTemplate.from_template(
      "\nKOMMENTAR:\n{comm}\nKONTEXT1:\n{qual}\nKONTEXT2:\n{tasks}\nKONTEXT3:\n{firm}\n"
 )
 
-def _vote_for_the_best_option(state):
+def _vote_for_the_best_option(state: PlanState):
     candidates = state.get("candidates", [])
     if not candidates:
         return {"best_response": None}
@@ -667,6 +671,7 @@ def _vote_for_the_best_option(state):
             "tasks": "\n".join(state["tasks"]), "firm": "\n".join(state["firm"])}
         )
     except:
+        time.sleep(TIMEOUT)
         try:
             print("******* no cloud model, try a local one *******\n")
             result = (prompt_voting | llm_enum_loc).invoke(
@@ -675,6 +680,7 @@ def _vote_for_the_best_option(state):
                 "tasks": "\n".join(state["tasks"]), "firm": "\n".join(state["firm"])}
             ) 
         except:
+            time.sleep(TIMEOUT)
             try:
                 print("??????? no local model, try an alternative one ???????\n")
                 result = (prompt_voting | llm_enum_alt).invoke(
@@ -683,6 +689,7 @@ def _vote_for_the_best_option(state):
                     "tasks": "\n".join(state["tasks"]), "firm": "\n".join(state["firm"])}
                 )
             except:
+                time.sleep(TIMEOUT)
                 print("!!!!!!! no other models, try the alternative two !!!!!!!\n")
                 result = (prompt_voting | llm_enum_alt1).invoke(
                     {"candidates": "\n".join(all_candidates), "item": state["item"],
@@ -707,6 +714,44 @@ def _vote_for_the_best_option(state):
                 print("Der String repräsentiert kein Dictionary")
         except (ValueError, SyntaxError):
             print("Ungültiger Syntax für ein Dictionary")
+            prompt = """
+            Finde aus dem Text heraus, welche OPTION ausgewählt wurde.
+            Gib nur diese OPTION als eine ganze Zahl wie 1, 2 oder 3 aus.
+
+            TEXT: 
+            {original_text}
+
+            OPTION: 
+            """
+
+            clean_input = prompt.format(original_text=var)
+            clean_output = []
+            try:
+                clean_output = llm_enorm.invoke(clean_input)
+            except:
+                time.sleep(TIMEOUT)
+                try:
+                    print("******* no cloud model, try a local one *******\n")
+                    clean_output = llm_enorm_loc.invoke(clean_input)
+                except:
+                    time.sleep(TIMEOUT)
+                    try:
+                        print("??????? no local model, try an alternative one ???????\n")
+                        clean_output = llm_enorm_alt.invoke(clean_input)
+                    except:
+                        time.sleep(TIMEOUT)
+                        print("!!!!!!! no other models, try the alternative two !!!!!!!\n")
+                        clean_output = llm_middle.invoke(clean_input)
+                
+            int_res = clean_output.content.strip()
+            try:
+                if int(int_res) > 0:
+                    res = {"value": str(int_res)}
+                else:
+                    print("OPTION - keine positive Ganzzahl: " + str(int_res)) 
+            except:
+                print("OPTION - keine Ganzzahl: " + str(int_res)) 
+
     elif isinstance(var, dict):
         print("Variable ist kein String sondern Dict")
         res = var
@@ -743,6 +788,7 @@ async def _build_initial_plan(state: PlanState) -> PlanState:
                                 "tasks": "\n".join(state["tasks"]),
                                 "firm": "\n".join(state["firm"])})
     except:
+        time.sleep(TIMEOUT)
         try:
             print("******* no cloud model, try a local one *******\n")
             plan_raw = await planner_loc.ainvoke({"item": state["item"],
@@ -751,6 +797,7 @@ async def _build_initial_plan(state: PlanState) -> PlanState:
                                 "tasks": "\n".join(state["tasks"]),
                                 "firm": "\n".join(state["firm"])})  
         except:
+            time.sleep(TIMEOUT)
             try:
                 print("??????? no local model, try an alternative one ???????\n")
                 plan_raw = await planner_alt.ainvoke({"item": state["item"],
@@ -759,6 +806,7 @@ async def _build_initial_plan(state: PlanState) -> PlanState:
                                 "tasks": "\n".join(state["tasks"]),
                                 "firm": "\n".join(state["firm"])}) 
             except:
+                time.sleep(TIMEOUT)
                 print("!!!!!!! no other models, try the alternative two !!!!!!!\n")
                 plan_raw = await planner_alt1.ainvoke({"item": state["item"],
                                 "comm": state["comm"],
@@ -811,6 +859,7 @@ async def _plan_next(state: PlanState, config: RunnableConfig) -> PlanState:
                 "tasks": "\n".join(state["tasks"]),
                 "firm": "\n".join(state["firm"])})
     except:
+        time.sleep(TIMEOUT)
         try:
             print("******* no cloud model, try a local one *******\n")
             next_step_raw = await replanner_loc.ainvoke({"item": state["item"], "current_plan": node.get_full_plan(), 
@@ -819,6 +868,7 @@ async def _plan_next(state: PlanState, config: RunnableConfig) -> PlanState:
                 "tasks": "\n".join(state["tasks"]),
                 "firm": "\n".join(state["firm"])})  
         except:
+            time.sleep(TIMEOUT)
             try:
                 print("??????? no local model, try an alternative one ???????\n")
                 next_step_raw = await replanner_alt.ainvoke({"item": state["item"], "current_plan": node.get_full_plan(), 
@@ -827,6 +877,7 @@ async def _plan_next(state: PlanState, config: RunnableConfig) -> PlanState:
                     "tasks": "\n".join(state["tasks"]),
                     "firm": "\n".join(state["firm"])}) 
             except:
+                time.sleep(TIMEOUT)
                 print("!!!!!!! no other models, try the alternative two !!!!!!!\n")
                 next_step_raw = await replanner_alt1.ainvoke({"item": state["item"], "current_plan": node.get_full_plan(), 
                     "comm": state["comm"],
@@ -851,14 +902,17 @@ async def _get_final_response(state: PlanState) -> PlanState:
     try:
         final_response = await responder.ainvoke({"item": state["item"], "plan": node.get_full_plan(), "comm": state["comm"]})
     except:
+        time.sleep(TIMEOUT)
         try:
             print("******* no cloud model, try a local one *******\n")
             final_response = await responder_loc.ainvoke({"item": state["item"], "plan": node.get_full_plan(), "comm": state["comm"]})
         except:
+            time.sleep(TIMEOUT)
             try:
                 print("??????? no local model, try an alternative one ???????\n")
                 final_response = await responder_alt.ainvoke({"item": state["item"], "plan": node.get_full_plan(), "comm": state["comm"]})
             except:
+                time.sleep(TIMEOUT)
                 print("!!!!!!! no other models, try the alternative two !!!!!!!\n")
                 final_response = await responder_alt1.ainvoke({"item": state["item"], "plan": node.get_full_plan(), "comm": state["comm"]})
     node.final_response = final_response
@@ -962,14 +1016,17 @@ clean_output = []
 try:
     clean_output = llm_enorm.invoke(clean_input)
 except:
+    time.sleep(TIMEOUT)
     try:
         print("******* no cloud model, try a local one *******\n")
         clean_output = llm_enorm_loc.invoke(clean_input)
     except:
+        time.sleep(TIMEOUT)
         try:
             print("??????? no local model, try an alternative one ???????\n")
             clean_output = llm_enorm_alt.invoke(clean_input)
         except:
+            time.sleep(TIMEOUT)
             print("!!!!!!! no other models, try the alternative two !!!!!!!\n")
             clean_output = llm_middle.invoke(clean_input)
     
